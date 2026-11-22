@@ -1,70 +1,74 @@
-# 🧪 Test cases – Parent Guide / Przewodnik Rodzica ZUS
+# 🧪 Przypadki testowe – Przewodnik Rodzica ZUS
 
-**Demo:** https://teamtina.vercel.app · login details: see [README.md](README.md)
+**Demo:** https://teamtina.vercel.app · dane logowania: zobacz [README.pl.md](README.pl.md)
 
-Each test lists what to enter and the expected result. Amounts are gross, per month.
+Każdy test zawiera dane do wpisania i oczekiwany wynik. Kwoty są brutto, miesięcznie.
 
 ---
 
-## 1. Language
+## 1. Język
 
-| Test | Steps | ✅ Expected |
+| Test | Kroki | ✅ Oczekiwany wynik |
 |---|---|---|
-| 1.1 | Open the app | Login screen in **Polish** |
-| 1.2 | Click 🇬🇧 **EN**, then 🇵🇱 **PL** | Login, navigation, home page and calculator switch language; the choice is remembered after reload |
+| 1.1 | Otwórz aplikację | Ekran logowania **po polsku** |
+| 1.2 | Kliknij 🇬🇧 **EN**, potem 🇵🇱 **PL** | Logowanie, nawigacja, strona główna i kalkulator zmieniają język; wybór zostaje zapamiętany po odświeżeniu |
 
-## 2. Calculator (Kalkulator)
+## 2. Kalkulator
 
-Start from the default form (birth, 1 child) for each test.
+Każdy test zaczynaj od domyślnego formularza (urodzenie, 1 dziecko).
 
-| Test | Input | ✅ Expected |
+| Test | Dane | ✅ Oczekiwany wynik |
 |---|---|---|
-| 2.1 Basic | Mother: gross salary **8000** | Benefit base **6 903,20 zł** (8000 − 13.71%) · maternity **6 903,20 zł** (100%) · parental **4 832,24 zł** (70%) |
-| 2.2 Father | Father: gross salary **6000** | Base **5 177,40 zł** · paternity **5 177,40 zł** · parental **3 624,18 zł** |
-| 2.3 81.5% option | 2.1 + tick **81.5% option** | Mother's rates **81,5%**, maternity **5 626,11 zł**, warning that the father still takes parental weeks |
-| 2.4 Transfer limit | Father takes over **10** maternity weeks | Warning: at most **6** weeks (20 − 14 personal weeks) |
-| 2.5 Part-time work | Mother works **50%** on parental leave | Parental leave **32 → 64 weeks**, monthly amount halved, total unchanged |
-| 2.6 Twins | Children: **2** | Maternity leave **31 weeks**, parental leave **43 weeks** in total |
-| 2.7 Adoption age | Adoption, child aged **15** | Warning: leave only for a child up to **14** |
+| 2.1 Podstawowy | Matka: wynagrodzenie brutto **8000** | Podstawa wymiaru **6 903,20 zł** (8000 − 13,71%) · macierzyński **6 903,20 zł** (100%) · rodzicielski **4 832,24 zł** (70%) |
+| 2.2 Ojciec | Ojciec: wynagrodzenie brutto **6000** | Podstawa **5 177,40 zł** · ojcowski **5 177,40 zł** · rodzicielski **3 624,18 zł** |
+| 2.3 Opcja 81,5% | 2.1 + zaznacz **opcję 81,5%** | Stawki matki **81,5%**, macierzyński **5 626,11 zł**, ostrzeżenie, że ojciec bierze część urlopu rodzicielskiego |
+| 2.4 Limit przekazania | Ojciec przejmuje **10** tygodni urlopu macierzyńskiego | Ostrzeżenie: maksymalnie **6** tygodni (20 − 14 tygodni dla matki) |
+| 2.5 Praca na część etatu | Matka pracuje w wymiarze **50%** na urlopie rodzicielskim | Urlop rodzicielski **32 → 64 tyg.**, kwota miesięczna o połowę niższa, suma bez zmian |
+| 2.6 Bliźnięta | Liczba dzieci: **2** | Urlop macierzyński **31 tyg.**, urlop rodzicielski łącznie **43 tyg.** |
+| 2.7 Wiek przy adopcji | Adopcja, dziecko w wieku **15** lat | Ostrzeżenie: urlop tylko na dziecko do **14.** roku życia |
 
-Also visible: the timeline "who is at home, and when" and the total amount counting up.
+Widoczne również: oś czasu „Kto i kiedy jest w domu” oraz animowana suma świadczeń.
 
-## 3. Sample cases (Sprawy)
+## 3. Przykładowe sprawy (Sprawy)
 
-| Test | Steps | ✅ Expected |
+| Test | Kroki | ✅ Oczekiwany wynik |
 |---|---|---|
-| 3.1 | Open **"Demo: employee, 1 child"** in the calculator | Green banner: matches ZUS, **6 903,20 zł / month** |
-| 3.2 | Open **"Demo: contract ended before birth"** | Green banner: ZUS refused and the calculator shows no benefit |
+| 3.1 | Otwórz **„Demo: employee, 1 child”** w kalkulatorze | Zielony baner: zgodne z ZUS, **6 903,20 zł / mies.** |
+| 3.2 | Otwórz **„Demo: contract ended before birth”** | Zielony baner: ZUS odmówił i kalkulator również nie pokazuje świadczenia |
 
-## 4. Benefits in pregnancy (Ciąża)
+## 4. Świadczenia w ciąży (Ciąża)
 
-| Test | Input | ✅ Expected |
+| Test | Dane | ✅ Oczekiwany wynik |
 |---|---|---|
-| 4.1 Waiting period | Employment contract · insured since **2026-11-01** · sick leave **2026-11-22** · **8000** | **"Not yet – 9 more days"** (30-day waiting period) |
-| 4.2 Eligible | Same, insured since **2026-01-01** | Eligible, **6 903,20 zł / month** (100%, code "B") |
-| 4.3 Unpaid contributions | Own business + "unpaid contributions" | Warning: no benefit until the debt is paid |
+| 4.1 Okres wyczekiwania | Umowa o pracę · ubezpieczona od **2026-11-01** · zwolnienie od **2026-11-22** · **8000** | **„Not yet – 9 more days”** (30-dniowy okres wyczekiwania) |
+| 4.2 Prawo do zasiłku | To samo, ubezpieczona od **2026-01-01** | Zasiłek przysługuje, **6 903,20 zł / mies.** (100%, kod „B”) |
+| 4.3 Zaległe składki | Własna firma + „unpaid contributions” | Ostrzeżenie: brak wypłaty do czasu spłaty zadłużenia |
 
-## 5. My ZUS (simulation, fictional data)
+*Ten ekran jest obecnie w języku angielskim.*
 
-| Test | Steps | ✅ Expected |
+## 5. Mój ZUS (symulacja, fikcyjne dane)
+
+| Test | Kroki | ✅ Oczekiwany wynik |
 |---|---|---|
-| 5.1 | Choose **Anna** → Log in with mObywatel → confirm | Insured today, 2 e-ZLA with code "B" |
-| 5.2 | Anna → Certificates → Request | Certificate issued |
-| 5.3 | Anna → Applications → ZAM, fill in, send | Confirmation with a **UPO number** |
-| 5.4 | Log out → **Marta** | Not insured; certificate **refused** (debt); warning on the ZAM form |
+| 5.1 | Wybierz **Anna** → Log in with mObywatel → potwierdź | Ubezpieczona, 2 e-ZLA z kodem „B” |
+| 5.2 | Anna → Certificates → Request | Zaświadczenie wydane |
+| 5.3 | Anna → Applications → ZAM, wypełnij, wyślij | Potwierdzenie z **numerem UPO** |
+| 5.4 | Wyloguj → **Marta** | Brak ubezpieczenia; zaświadczenie **odmowa** (zaległości); ostrzeżenie we wniosku ZAM |
 
-## 6. Admin panel
+*Ten ekran jest obecnie w języku angielskim.*
 
-| Test | Steps | ✅ Expected |
+## 6. Panel administratora
+
+| Test | Kroki | ✅ Oczekiwany wynik |
 |---|---|---|
-| 6.1 | Admin → Parameters → **Rate – parental leave 70 → 75** → Save | "Saved"; the calculator shows **75%** immediately |
-| 6.2 | Set it back to **70** | Calculator back to 70% |
-| 6.3 | Log in with a non-admin account, open `/admin` | **Admin only** – no access |
+| 6.1 | Admin → Parameters → **Rate – parental leave 70 → 75** → Save | „Saved”; kalkulator od razu pokazuje **75%** |
+| 6.2 | Ustaw z powrotem **70** | Kalkulator wraca do 70% |
+| 6.3 | Zaloguj się kontem bez uprawnień i otwórz `/admin` | **Admin only** – brak dostępu |
 
-**Please set any changed parameter back to its original value.**
+**Prosimy o przywrócenie pierwotnych wartości zmienionych parametrów.**
 
-## 7. Responsive design
+## 7. Responsywność
 
-| Test | Steps | ✅ Expected |
+| Test | Kroki | ✅ Oczekiwany wynik |
 |---|---|---|
-| 7.1 | Open on a phone, or F12 → Ctrl + Shift + M | Navigation becomes a **☰ menu**; tiles in one column |
+| 7.1 | Otwórz na telefonie albo F12 → Ctrl + Shift + M | Nawigacja zmienia się w **menu ☰**; kafelki w jednej kolumnie |
