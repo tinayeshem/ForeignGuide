@@ -1,6 +1,7 @@
 import { View, Text, Pressable, ScrollView, StyleSheet } from 'react-native'
 import { Stack, router, Href } from 'expo-router'
 import { useIsAdmin } from '../features/admin/useIsAdmin'
+import { supabase } from '../lib/supabase'
 
 type Tile = {
   icon: string
@@ -35,6 +36,18 @@ const TILES: Tile[] = [
     href: '/risks',
   },
   {
+    icon: '🏛️',
+    title: 'My ZUS (simulation)',
+    description: 'Log in with mObywatel, check insurance, e-ZLA, certificates and send applications.',
+    href: '/zus',
+  },
+  {
+    icon: '💛',
+    title: 'Support',
+    description: 'Organisations that help in difficult situations – premature birth, illness, loss.',
+    href: '/support',
+  },
+  {
     icon: '✅',
     title: 'My checklist',
     description: 'Your personal deadlines, documents and where to go.',
@@ -61,7 +74,16 @@ export default function HomeScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Stack.Screen options={{ title: 'Parent Guide' }} />
+      <Stack.Screen
+        options={{
+          title: 'Parent Guide',
+          headerRight: () => (
+            <Pressable onPress={() => supabase.auth.signOut()} hitSlop={10}>
+              <Text style={styles.signOut}>Sign out</Text>
+            </Pressable>
+          ),
+        }}
+      />
 
       <Text style={styles.title}>Your guide to parental benefits 👶</Text>
       <Text style={styles.subtitle}>
@@ -98,4 +120,5 @@ const styles = StyleSheet.create({
   tileIcon: { fontSize: 32 },
   tileTitle: { fontSize: 17, fontWeight: '700', color: '#0b3a5e' },
   tileText: { fontSize: 14, color: '#555', lineHeight: 20 },
+  signOut: { color: '#0b3a5e', fontSize: 15, fontWeight: '600', marginRight: 12 },
 })
