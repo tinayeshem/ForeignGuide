@@ -21,7 +21,7 @@ Aplikacja działa po **polsku i angielsku** – dla polskich rodzin oraz dla rod
 | | |
 |---|---|
 | **Adres** | https://teamtina.vercel.app |
-| **Konto jury (administrator)** | `JUDGE_EMAIL_HERE` / `JUDGE_PASSWORD_HERE` |
+| **Konto jury (administrator)** | `tinayeshe13@gmail.com` / `Simultaneous@2000` |
 
 **Proponowana ścieżka (ok. 5 minut):**
 
@@ -103,8 +103,8 @@ npm install
 Utwórz plik `.env`:
 
 ```
-EXPO_PUBLIC_SUPABASE_URL=adres-twojego-projektu
-EXPO_PUBLIC_SUPABASE_KEY=twoj-klucz-publiczny
+EXPO_PUBLIC_SUPABASE_URL=https://lfkcslaqcobzcgxmsgre.supabase.co/rest/v1/
+EXPO_PUBLIC_SUPABASE_KEY=sb_publishable_90DrCR5ZnnM7irn5SbbAXw_1Oy0zwmp
 ```
 
 ```bash
