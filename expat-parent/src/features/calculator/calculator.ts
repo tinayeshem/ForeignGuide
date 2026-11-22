@@ -1,3 +1,5 @@
+import type { Lang } from '../../i18n/translations'
+
 export type Params = Record<string, number>
 export type Mode = 'birth' | 'adoption' | 'foster'
 export type ParentKey = 'mother' | 'father'
@@ -141,7 +143,12 @@ function summarize(periods: Period[]) {
 
 // ---------- main calculation ----------
 
-export function calculate(params: Params, input: CalculatorInput): CalculatorResult {
+export function calculate(
+  params: Params,
+  input: CalculatorInput,
+  lang: Lang = 'en'
+): CalculatorResult {
+  const L = (en: string, pl: string) => (lang === 'pl' ? pl : en)
   const limits = getLimits(params, input)
   const warnings: string[] = []
   const notes: string[] = []
@@ -170,7 +177,10 @@ export function calculate(params: Params, input: CalculatorInput): CalculatorRes
 
     if (input.childAgeYears > maxAge) {
       warnings.push(
-        `Leave on maternity-leave terms is only available for a child up to ${maxAge} years old.`
+        L(
+          `Leave on maternity-leave terms is only available for a child up to ${maxAge} years old.`,
+          `Urlop na warunkach urlopu macierzyńskiego przysługuje tylko na dziecko do ${maxAge}. roku życia.`
+        )
       )
       return { limits, bases, periods, totals: summarize(periods), warnings, notes }
     }
@@ -182,18 +192,34 @@ export function calculate(params: Params, input: CalculatorInput): CalculatorRes
   if (!motherOk) {
     warnings.push(
       isBirth
-        ? 'The mother is not covered by sickness insurance on the birth date, so she has no right to maternity benefit. Ask ZUS about other support (e.g. "świadczenie rodzicielskie").'
-        : 'Parent 1 is not covered by sickness insurance, so there is no right to maternity benefit.'
+        ? L(
+            'The mother is not covered by sickness insurance on the birth date, so she has no right to maternity benefit. Ask ZUS about other support (e.g. "świadczenie rodzicielskie").',
+            'Matka nie podlega ubezpieczeniu chorobowemu w dniu porodu, więc zasiłek macierzyński jej nie przysługuje. Zapytaj o inne wsparcie (np. świadczenie rodzicielskie).'
+          )
+        : L(
+            'Parent 1 is not covered by sickness insurance, so there is no right to maternity benefit.',
+            'Rodzic 1 nie podlega ubezpieczeniu chorobowemu, więc zasiłek macierzyński nie przysługuje.'
+          )
     )
   }
 
   if ((motherOk && bases.mother === 0) || (fatherOk && bases.father === 0)) {
-    notes.push('Enter the salary or benefit base to see the amounts.')
+    notes.push(
+      L(
+        'Enter the salary or benefit base to see the amounts.',
+        'Wpisz wynagrodzenie lub podstawę wymiaru, aby zobaczyć kwoty.'
+      )
+    )
   }
 
   const useSingle = input.singleApplication && isBirth && motherOk
   if (input.singleApplication && !useSingle) {
-    warnings.push('The 81.5% option is only available to an insured mother after giving birth.')
+    warnings.push(
+      L(
+        'The 81.5% option is only available to an insured mother after giving birth.',
+        'Opcja 81,5% przysługuje tylko ubezpieczonej matce po porodzie.'
+      )
+    )
   }
 
   // ----- Maternity leave (or leave on maternity-leave terms) -----
@@ -201,14 +227,27 @@ export function calculate(params: Params, input: CalculatorInput): CalculatorRes
     let transfer = 0
     if (input.maternityTransferWeeks > 0) {
       if (!isBirth) {
-        warnings.push('Handing over maternity leave only applies after a birth.')
+        warnings.push(
+          L(
+            'Handing over maternity leave only applies after a birth.',
+            'Przekazanie urlopu macierzyńskiego dotyczy tylko sytuacji po porodzie.'
+          )
+        )
       } else if (!fatherOk) {
-        warnings.push('Maternity leave can only be handed over to an insured father.')
+        warnings.push(
+          L(
+            'Maternity leave can only be handed over to an insured father.',
+            'Urlop macierzyński można przekazać tylko ubezpieczonemu ojcu.'
+          )
+        )
       } else {
         transfer = clamp(Math.round(input.maternityTransferWeeks), 0, limits.maternityTransferMax)
         if (input.maternityTransferWeeks > limits.maternityTransferMax) {
           warnings.push(
-            `The mother must use at least ${limits.personalWeeks} weeks herself, so at most ${limits.maternityTransferMax} weeks can be handed over.`
+            L(
+              `The mother must use at least ${limits.personalWeeks} weeks herself, so at most ${limits.maternityTransferMax} weeks can be handed over.`,
+              `Matka musi wykorzystać co najmniej ${limits.personalWeeks} tygodni, więc przekazać można maksymalnie ${limits.maternityTransferMax} tyg.`
+            )
           )
         }
       }
@@ -232,7 +271,12 @@ export function calculate(params: Params, input: CalculatorInput): CalculatorRes
     if (isBirth && input.supplementaryWeeks > 0) {
       const w = clamp(Math.round(input.supplementaryWeeks), 0, limits.supplementaryMax)
       if (input.supplementaryWeeks > limits.supplementaryMax) {
-        warnings.push(`Supplementary maternity leave is limited to ${limits.supplementaryMax} weeks.`)
+        warnings.push(
+          L(
+            `Supplementary maternity leave is limited to ${limits.supplementaryMax} weeks.`,
+            `Uzupełniający urlop macierzyński wynosi maksymalnie ${limits.supplementaryMax} tyg.`
+          )
+        )
       }
       periods.push(makePeriod('mother', 'supplementary', w, rateSupplementary, bases.mother))
     }
@@ -246,7 +290,10 @@ export function calculate(params: Params, input: CalculatorInput): CalculatorRes
     motherParental = clamp(Math.round(input.mother.parentalWeeks), 0, limits.parentalMaxPerParent)
     if (input.mother.parentalWeeks > limits.parentalMaxPerParent) {
       warnings.push(
-        `Each parent can use at most ${limits.parentalMaxPerParent} weeks of parental leave (${limits.reservedWeeks} weeks are reserved for the other parent).`
+        L(
+          `Each parent can use at most ${limits.parentalMaxPerParent} weeks of parental leave (${limits.reservedWeeks} weeks are reserved for the other parent).`,
+          `Każdy z rodziców może wykorzystać maksymalnie ${limits.parentalMaxPerParent} tyg. urlopu rodzicielskiego (${limits.reservedWeeks} tyg. jest zarezerwowanych dla drugiego rodzica).`
+        )
       )
     }
   }
@@ -256,17 +303,30 @@ export function calculate(params: Params, input: CalculatorInput): CalculatorRes
     const available = Math.min(limits.parentalMaxPerParent, limits.parentalTotal - motherParental)
     fatherParental = clamp(Math.round(input.father.parentalWeeks), 0, available)
     if (input.father.parentalWeeks > available) {
-      warnings.push(`Only ${available} weeks of parental leave are left for the father.`)
+      warnings.push(
+        L(
+          `Only ${available} weeks of parental leave are left for the father.`,
+          `Dla ojca pozostało tylko ${available} tyg. urlopu rodzicielskiego.`
+        )
+      )
     }
   } else if (motherOk) {
     warnings.push(
-      `The father is not insured, so his ${limits.reservedWeeks} reserved weeks of parental leave cannot be used.`
+      L(
+        `The father is not insured, so his ${limits.reservedWeeks} reserved weeks of parental leave cannot be used.`,
+        `Ojciec nie jest ubezpieczony, więc jego ${limits.reservedWeeks} tyg. zarezerwowanego urlopu rodzicielskiego nie może zostać wykorzystanych.`
+      )
     )
   }
 
   for (const pk of ['mother', 'father'] as ParentKey[]) {
     if (input[pk].workPercent > workMax) {
-      warnings.push(`You can work at most ${workMax}% of full time while on parental leave.`)
+      warnings.push(
+        L(
+          `You can work at most ${workMax}% of full time while on parental leave.`,
+          `W trakcie urlopu rodzicielskiego można pracować maksymalnie w wymiarze ${workMax}% etatu.`
+        )
+      )
       break
     }
   }
@@ -300,13 +360,24 @@ export function calculate(params: Params, input: CalculatorInput): CalculatorRes
   // ----- Paternity leave -----
   if (input.fatherPaternity) {
     if (!fatherOk) {
-      warnings.push('Paternity leave benefit requires the father to be covered by sickness insurance.')
+      warnings.push(
+        L(
+          'Paternity leave benefit requires the father to be covered by sickness insurance.',
+          'Zasiłek za okres urlopu ojcowskiego wymaga, aby ojciec podlegał ubezpieczeniu chorobowemu.'
+        )
+      )
     } else {
       periods.push(makePeriod('father', 'paternity', limits.paternityWeeks, ratePaternity, bases.father))
       notes.push(
         isBirth
-          ? `Paternity leave must be used before the child turns ${paternityMonths} months – in one block or two blocks of at least 7 days.`
-          : 'After adoption, paternity leave must be used within 12 months of the adoption becoming final (child under 14).'
+          ? L(
+              `Paternity leave must be used before the child turns ${paternityMonths} months – in one block or two blocks of at least 7 days.`,
+              `Urlop ojcowski trzeba wykorzystać, zanim dziecko skończy ${paternityMonths} miesięcy – jednorazowo lub w dwóch częściach, po co najmniej 7 dni.`
+            )
+          : L(
+              'After adoption, paternity leave must be used within 12 months of the adoption becoming final (child under 14).',
+              'Po adopcji urlop ojcowski trzeba wykorzystać w ciągu 12 miesięcy od uprawomocnienia się postanowienia (dziecko do 14. roku życia).'
+            )
       )
     }
   }
@@ -314,18 +385,27 @@ export function calculate(params: Params, input: CalculatorInput): CalculatorRes
   // ----- 81.5% option notes -----
   if (useSingle) {
     notes.push(
-      `81.5% option: the mother must apply for the full maternity and parental leave no later than ${singleDeadline} days after the birth.`
+      L(
+        `81.5% option: the mother must apply for the full maternity and parental leave no later than ${singleDeadline} days after the birth.`,
+        `Opcja 81,5%: matka musi złożyć wniosek o cały urlop macierzyński i rodzicielski najpóźniej ${singleDeadline} dni po porodzie.`
+      )
     )
     if (fatherParental > 0 || motherParental < limits.parentalMaxPerParent) {
       warnings.push(
-        'The 81.5% option assumes the mother applies for the full leave. If plans change (e.g. the father takes part of the parental leave), the benefit is recalculated – confirm with ZUS or your employer.'
+        L(
+          'The 81.5% option assumes the mother applies for the full leave. If plans change (e.g. the father takes part of the parental leave), the benefit is recalculated – confirm with ZUS or your employer.',
+          'Opcja 81,5% zakłada wniosek o cały urlop. Jeśli plany się zmienią (np. ojciec weźmie część urlopu rodzicielskiego), zasiłek zostanie przeliczony – potwierdź to w ZUS lub u pracodawcy.'
+        )
       )
     }
   }
 
   if (isBirth && (motherParental > 0 || fatherParental > 0)) {
     notes.push(
-      'Parental leave can be split into up to 5 parts, used until the end of the calendar year in which the child turns 6.'
+      L(
+        'Parental leave can be split into up to 5 parts, used until the end of the calendar year in which the child turns 6.',
+        'Urlop rodzicielski można podzielić na maksymalnie 5 części i wykorzystać do końca roku kalendarzowego, w którym dziecko kończy 6 lat.'
+      )
     )
   }
 

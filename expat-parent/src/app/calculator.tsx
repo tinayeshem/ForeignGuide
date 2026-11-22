@@ -7,10 +7,14 @@ import {
   ScrollView,
   ActivityIndicator,
   StyleSheet,
+  Platform,
 } from 'react-native'
 import { Stack, useLocalSearchParams } from 'expo-router'
 import { useCalculatorParams } from '../features/calculator/useCalculatorParams'
 import { getCaseById, SampleCase } from '../features/cases/caseService'
+import { AnimatedNumber } from '../components/ui/AnimatedNumber'
+import { FadeIn } from '../components/ui/FadeIn'
+import { useLanguage } from '../i18n/LanguageContext'
 import {
   calculate,
   getLimits,
@@ -51,26 +55,29 @@ function formatWeeks(n: number): string {
   return Number.isInteger(n) ? String(n) : n.toFixed(1)
 }
 
-function periodLabel(type: PeriodType, mode: Mode): string {
+type T = (key: string, vars?: Record<string, string | number>) => string
+
+function periodLabel(type: PeriodType, mode: Mode, t: T): string {
   switch (type) {
     case 'maternity':
-      return mode === 'birth' ? 'Maternity leave' : 'Leave on maternity-leave terms'
+      return mode === 'birth' ? t('period.maternity') : t('period.maternityTerms')
     case 'supplementary':
-      return 'Supplementary maternity leave'
+      return t('period.supplementary')
     case 'parental':
-      return 'Parental leave'
+      return t('period.parental')
     case 'paternity':
-      return 'Paternity leave'
+      return t('period.paternity')
   }
 }
 
-function parentLabel(pk: ParentKey, mode: Mode): string {
-  if (mode === 'birth') return pk === 'mother' ? 'Mother' : 'Father'
-  return pk === 'mother' ? 'Parent 1' : 'Parent 2'
+function parentLabel(pk: ParentKey, mode: Mode, t: T): string {
+  if (mode === 'birth') return pk === 'mother' ? t('calc.mother') : t('calc.father')
+  return pk === 'mother' ? t('calc.parent1') : t('calc.parent2')
 }
 
 export default function CalculatorScreen() {
   const { params, loading, error, reload } = useCalculatorParams()
+  const { t, lang } = useLanguage()
 
   const [mode, setMode] = useState<Mode>('birth')
   const [children, setChildren] = useState(1)
@@ -133,7 +140,7 @@ export default function CalculatorScreen() {
       <View style={styles.center}>
         <Text style={styles.errorText}>{error}</Text>
         <Pressable style={styles.button} onPress={reload}>
-          <Text style={styles.buttonText}>Try again</Text>
+          <Text style={styles.buttonText}>{t('calc.tryAgain')}</Text>
         </Pressable>
       </View>
     )
@@ -167,7 +174,7 @@ export default function CalculatorScreen() {
   }
 
   const limits = getLimits(params, input)
-  const result = calculate(params, input)
+  const result = calculate(params, input, lang)
 
   // ----- Compare with the ZUS decision -----
   let comparison: { ok: boolean; text: string } | null = null
@@ -178,38 +185,44 @@ export default function CalculatorScreen() {
 
     if (loadedCase.zus_decision === 'refused') {
       comparison = ourPeriod
-        ? { ok: false, text: 'ZUS refused, but the calculator shows a benefit – check the inputs.' }
-        : { ok: true, text: 'ZUS refused, and the calculator also shows no benefit.' }
+        ? { ok: false, text: t('calc.cmpRefusedButBenefit') }
+        : { ok: true, text: t('calc.cmpRefusedOk') }
     } else if (!ourPeriod) {
-      comparison = { ok: false, text: 'ZUS granted the benefit, but the calculator shows none – check the inputs.' }
+      comparison = { ok: false, text: t('calc.cmpGrantedButNone') }
     } else if (loadedCase.zus_monthly_amount !== null) {
       const diff = Math.abs(ourPeriod.monthlyAmount - loadedCase.zus_monthly_amount)
       comparison = {
         ok: diff < 1,
         text:
           diff < 1
-            ? `Matches ZUS: ${formatPLN(ourPeriod.monthlyAmount)} / month`
-            : `ZUS: ${formatPLN(loadedCase.zus_monthly_amount)} · calculator: ${formatPLN(ourPeriod.monthlyAmount)} (difference ${formatPLN(diff)})`,
+            ? t('calc.cmpMatch', { amount: formatPLN(ourPeriod.monthlyAmount) })
+            : t('calc.cmpDiff', {
+                zus: formatPLN(loadedCase.zus_monthly_amount),
+                ours: formatPLN(ourPeriod.monthlyAmount),
+                diff: formatPLN(diff),
+              }),
       }
     } else {
-      comparison = { ok: true, text: 'ZUS granted the benefit, and the calculator shows it too.' }
+      comparison = { ok: true, text: t('calc.cmpGrantedOk') }
     }
   }
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
-      <Stack.Screen options={{ title: 'Benefit calculator' }} />
+      <Stack.Screen options={{ title: t('calc.screenTitle') }} />
 
-      <Text style={styles.title}>🧮 Maternity benefit calculator</Text>
-      <Text style={styles.subtitle}>
-        Zasiłek macierzyński – how long and how much, for both parents.
-      </Text>
+      <FadeIn>
+        <Text style={styles.title}>{t('calc.title')}</Text>
+        <Text style={styles.subtitle}>{t('calc.subtitle')}</Text>
+      </FadeIn>
 
       {loadedCase && comparison && (
         <View style={[styles.caseBanner, comparison.ok ? styles.caseOk : styles.caseBad]}>
-          <Text style={styles.caseTitle}>📂 Sample case: {loadedCase.title}</Text>
+          <Text style={styles.caseTitle}>{t('calc.case', { title: loadedCase.title })}</Text>
           <Text style={styles.caseText}>
-            ZUS decision: {loadedCase.zus_decision === 'granted' ? '✅ granted' : '❌ refused'}
+            {t('calc.zusDecision', {
+              decision: loadedCase.zus_decision === 'granted' ? t('calc.granted') : t('calc.refused'),
+            })}
             {loadedCase.zus_notes ? ` – ${loadedCase.zus_notes}` : ''}
           </Text>
           <Text style={styles.caseResult}>
@@ -221,16 +234,16 @@ export default function CalculatorScreen() {
 
       {/* ---------- Situation ---------- */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>1. Your situation</Text>
+        <Text style={styles.sectionTitle}>{t('calc.situation')}</Text>
 
-        <Text style={styles.label}>How is the child joining your family?</Text>
+        <Text style={styles.label}>{t('calc.howJoining')}</Text>
         <View style={styles.row}>
-          <Chip label="👶 Birth" selected={mode === 'birth'} onPress={() => setMode('birth')} />
-          <Chip label="🏠 Adoption" selected={mode === 'adoption'} onPress={() => setMode('adoption')} />
-          <Chip label="🤝 Foster care" selected={mode === 'foster'} onPress={() => setMode('foster')} />
+          <Chip label={t('calc.birth')} selected={mode === 'birth'} onPress={() => setMode('birth')} />
+          <Chip label={t('calc.adoption')} selected={mode === 'adoption'} onPress={() => setMode('adoption')} />
+          <Chip label={t('calc.foster')} selected={mode === 'foster'} onPress={() => setMode('foster')} />
         </View>
 
-        <Text style={styles.label}>Number of children (at one birth / adopted together)</Text>
+        <Text style={styles.label}>{t('calc.children')}</Text>
         <View style={styles.row}>
           {[1, 2, 3, 4, 5].map((n) => (
             <Chip
@@ -243,24 +256,24 @@ export default function CalculatorScreen() {
         </View>
 
         <Toggle
-          label='"Za życiem" certificate (serious illness / disability of the child)'
+          label={t('calc.zaZyciem')}
           value={zaZyciem}
           onChange={setZaZyciem}
         />
 
         {!isBirth && (
-          <NumberField label="Child's age (years)" value={childAge} onChange={setChildAge} />
+          <NumberField label={t('calc.childAge')} value={childAge} onChange={setChildAge} />
         )}
 
         {isBirth && (
           <>
             <Toggle
-              label={`81.5% option – one application for the whole leave within ${params.single_application_deadline_days ?? 21} days of birth`}
+              label={t('calc.single', { days: params.single_application_deadline_days ?? 21 })}
               value={singleApplication}
               onChange={setSingleApplication}
             />
             <NumberField
-              label="Supplementary maternity leave (premature / hospitalised baby), weeks"
+              label={t('calc.supplementary')}
               hint={`0–${limits.supplementaryMax}`}
               value={supplementaryWeeks}
               onChange={setSupplementaryWeeks}
@@ -271,7 +284,7 @@ export default function CalculatorScreen() {
 
       {/* ---------- Parents ---------- */}
       <ParentFields
-        title={`2. ${parentLabel('mother', mode)}`}
+        title={`2. ${parentLabel('mother', mode, t)}`}
         form={mother}
         onChange={(patch) => setMother({ ...mother, ...patch })}
         maxParental={limits.parentalMaxPerParent}
@@ -279,7 +292,7 @@ export default function CalculatorScreen() {
       />
 
       <ParentFields
-        title={`3. ${parentLabel('father', mode)}`}
+        title={`3. ${parentLabel('father', mode, t)}`}
         form={father}
         onChange={(patch) => setFather({ ...father, ...patch })}
         maxParental={limits.parentalMaxPerParent}
@@ -288,13 +301,13 @@ export default function CalculatorScreen() {
         {father.insured && (
           <>
             <Toggle
-              label={`Paternity leave (${limits.paternityWeeks} weeks at 100%)`}
+              label={t('calc.paternity', { weeks: limits.paternityWeeks })}
               value={fatherPaternity}
               onChange={setFatherPaternity}
             />
             {isBirth && (
               <NumberField
-                label="Maternity weeks taken over from the mother (after her first 14 weeks)"
+                label={t('calc.transfer')}
                 hint={`0–${limits.maternityTransferMax}`}
                 value={transferWeeks}
                 onChange={setTransferWeeks}
@@ -307,15 +320,33 @@ export default function CalculatorScreen() {
       {/* ---------- Limits ---------- */}
       <View style={styles.infoBox}>
         <Text style={styles.infoText}>
-          For your situation: maternity leave {limits.maternityWeeks} weeks · parental leave{' '}
-          {limits.parentalTotal} weeks in total (max {limits.parentalMaxPerParent} per parent,{' '}
-          {limits.reservedWeeks} reserved for each).
+          {t('calc.info', {
+            maternity: limits.maternityWeeks,
+            parental: limits.parentalTotal,
+            perParent: limits.parentalMaxPerParent,
+            reserved: limits.reservedWeeks,
+          })}
         </Text>
       </View>
 
       {/* ---------- Result ---------- */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📊 Your result</Text>
+        <View style={styles.resultHeader}>
+          <Text style={[styles.sectionTitle, { flex: 1 }]}>{t('calc.result')}</Text>
+          {Platform.OS === 'web' && (
+            <Pressable
+              {...({ dataSet: { noprint: 'true' } } as any)}
+              onPress={() => {
+                if (typeof window !== 'undefined') window.print()
+              }}
+              style={({ hovered }: any) => [styles.printButton, hovered && styles.printButtonHover]}
+            >
+              <Text style={styles.printButtonText}>{t('calc.print')}</Text>
+            </Pressable>
+          )}
+        </View>
+
+        <LeaveTimeline periods={result.periods} mode={mode} t={t} />
 
         {(['mother', 'father'] as ParentKey[]).map((pk) => {
           const ps = result.periods.filter((p) => p.parent === pk)
@@ -323,32 +354,40 @@ export default function CalculatorScreen() {
           return (
             <View key={pk} style={styles.resultBlock}>
               <Text style={styles.resultParent}>
-                {parentLabel(pk, mode)} · benefit base {formatPLN(result.bases[pk])} / month
+                {t('calc.base', {
+                  parent: parentLabel(pk, mode, t),
+                  amount: formatPLN(result.bases[pk]),
+                })}
               </Text>
               {ps.map((p, i) => (
-                <PeriodRow key={i} period={p} mode={mode} />
+                <PeriodRow key={i} period={p} mode={mode} t={t} />
               ))}
               <Text style={styles.resultTotal}>
-                Total: {formatWeeks(result.totals[pk].weeks)} weeks · {formatPLN(result.totals[pk].amount)}
+                {t('calc.total', {
+                  weeks: formatWeeks(result.totals[pk].weeks),
+                  amount: formatPLN(result.totals[pk].amount),
+                })}
               </Text>
             </View>
           )
         })}
 
         {result.periods.length === 0 && (
-          <Text style={styles.body}>No benefit periods for these answers.</Text>
+          <Text style={styles.body}>{t('calc.none')}</Text>
         )}
 
-        <Text style={styles.grandTotal}>All benefits: {formatPLN(result.totals.all)}</Text>
+        <View style={styles.grandTotalBox}>
+          <Text style={styles.grandTotalLabel}>{t('calc.allBenefits')}</Text>
+          <AnimatedNumber value={result.totals.all} format={formatPLN} style={styles.grandTotalValue} />
+        </View>
         <Text style={styles.disclaimer}>
-          Gross amounts (income tax is deducted). Simulation only – ZUS or your employer makes the
-          final decision.
+          {t('calc.disclaimer')}
         </Text>
       </View>
 
       {result.warnings.length > 0 && (
         <View style={styles.warningBox}>
-          <Text style={styles.warningTitle}>⚠️ Check this</Text>
+          <Text style={styles.warningTitle}>{t('calc.checkThis')}</Text>
           {result.warnings.map((w, i) => (
             <Text key={i} style={styles.warningText}>• {w}</Text>
           ))}
@@ -357,7 +396,7 @@ export default function CalculatorScreen() {
 
       {result.notes.length > 0 && (
         <View style={styles.noteBox}>
-          <Text style={styles.noteTitle}>💡 Good to know</Text>
+          <Text style={styles.noteTitle}>{t('calc.goodToKnow')}</Text>
           {result.notes.map((n, i) => (
             <Text key={i} style={styles.noteText}>• {n}</Text>
           ))}
@@ -384,12 +423,13 @@ function ParentFields({
   workMax: number
   children?: React.ReactNode
 }) {
+  const { t } = useLanguage()
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>{title}</Text>
 
       <Toggle
-        label="Covered by sickness insurance (ubezpieczenie chorobowe)"
+        label={t('calc.insured')}
         value={form.insured}
         onChange={(v) => onChange({ insured: v })}
       />
@@ -398,12 +438,12 @@ function ParentFields({
         <>
           <View style={styles.row}>
             <Chip
-              label="Gross salary"
+              label={t('calc.grossSalary')}
               selected={!form.amountIsBase}
               onPress={() => onChange({ amountIsBase: false })}
             />
             <Chip
-              label="Benefit base (from Z-3)"
+              label={t('calc.benefitBaseChip')}
               selected={form.amountIsBase}
               onPress={() => onChange({ amountIsBase: true })}
             />
@@ -411,24 +451,22 @@ function ParentFields({
 
           <NumberField
             label={
-              form.amountIsBase
-                ? 'Benefit base (podstawa wymiaru), zł / month'
-                : 'Average gross salary, last 12 months, zł / month'
+              form.amountIsBase ? t('calc.amountBase') : t('calc.amountGross')
             }
-            placeholder="e.g. 7000"
+            placeholder={t('calc.placeholder')}
             value={form.amount}
             onChange={(v) => onChange({ amount: v })}
           />
 
           <NumberField
-            label="Parental leave for this parent, weeks"
-            hint={`max ${maxParental}`}
+            label={t('calc.parentalWeeks')}
+            hint={t('calc.max', { n: maxParental })}
             value={form.parentalWeeks}
             onChange={(v) => onChange({ parentalWeeks: v })}
           />
 
           <NumberField
-            label="Working during parental leave, % of full time"
+            label={t('calc.work')}
             hint={`0–${workMax}%`}
             value={form.workPercent}
             onChange={(v) => onChange({ workPercent: v })}
@@ -441,23 +479,145 @@ function ParentFields({
   )
 }
 
-function PeriodRow({ period, mode }: { period: Period; mode: Mode }) {
+// ---------- Visual leave timeline ----------
+
+const SEGMENT_COLOR: Record<string, string> = {
+  'mother-maternity': '#0b3a5e',
+  'mother-supplementary': '#5b8def',
+  'mother-parental': '#1f6fb2',
+  'father-maternity': '#ff7a59',
+  'father-parental': '#ffb347',
+  'father-paternity': '#ffc857',
+}
+
+function LeaveTimeline({ periods, mode, t }: { periods: Period[]; mode: Mode; t: T }) {
+  // Sequential leave after the birth (paternity is flexible, shown separately)
+  const order = [
+    'mother-maternity',
+    'father-maternity',
+    'mother-supplementary',
+    'mother-parental',
+    'father-parental',
+  ]
+  const segments = order
+    .map((key) => periods.find((p) => `${p.parent}-${p.type}` === key))
+    .filter((p): p is Period => !!p && p.weeks > 0)
+
+  const paternity = periods.find((p) => p.type === 'paternity')
+  const total = segments.reduce((sum, p) => sum + p.weeks, 0)
+
+  if (total === 0) return null
+
+  const markers = [
+    { weeks: 26, label: t('calc.6months') },
+    { weeks: 52, label: t('calc.1year') },
+    { weeks: 104, label: t('calc.2years') },
+  ].filter((m) => m.weeks < total)
+
+  return (
+    <FadeIn style={styles.timelineWrap}>
+      <Text style={styles.timelineTitle}>{t('calc.timelineTitle')}</Text>
+
+      <View style={styles.timelineBar}>
+        {segments.map((p, i) => (
+          <View
+            key={i}
+            style={[
+              styles.timelineSegment,
+              {
+                flex: p.weeks,
+                backgroundColor: SEGMENT_COLOR[`${p.parent}-${p.type}`] ?? '#999',
+              },
+            ]}
+          >
+            {p.weeks / total > 0.12 && (
+              <Text style={styles.timelineSegmentText} numberOfLines={1}>
+                {t('calc.wk', { weeks: formatWeeks(p.weeks) })}
+              </Text>
+            )}
+          </View>
+        ))}
+
+        {markers.map((m) => (
+          <View
+            key={m.label}
+            style={[styles.timelineMarker, { left: `${(m.weeks / total) * 100}%` }]}
+          />
+        ))}
+      </View>
+
+      <View style={styles.timelineAxis}>
+        <Text style={styles.timelineAxisText}>{t('calc.birthAxis')}</Text>
+        {markers.map((m) => (
+          <Text
+            key={m.label}
+            style={[styles.timelineAxisMarker, { left: `${(m.weeks / total) * 100}%` }]}
+          >
+            {m.label}
+          </Text>
+        ))}
+        <Text style={[styles.timelineAxisText, { marginLeft: 'auto' }]}>
+          {t('calc.weeks', { weeks: formatWeeks(total) })}
+        </Text>
+      </View>
+
+      <View style={styles.legend}>
+        {segments.map((p, i) => (
+          <View key={i} style={styles.legendItem}>
+            <View
+              style={[
+                styles.legendDot,
+                { backgroundColor: SEGMENT_COLOR[`${p.parent}-${p.type}`] ?? '#999' },
+              ]}
+            />
+            <Text style={styles.legendText}>
+              {parentLabel(p.parent, mode, t)}: {periodLabel(p.type, mode, t).toLowerCase()}
+            </Text>
+          </View>
+        ))}
+        {paternity && (
+          <View style={styles.legendItem}>
+            <View style={[styles.legendDot, { backgroundColor: SEGMENT_COLOR['father-paternity'] }]} />
+            <Text style={styles.legendText}>
+              {t('calc.paternityLegend', {
+                parent: parentLabel('father', mode, t),
+                weeks: formatWeeks(paternity.weeks),
+              })}
+            </Text>
+          </View>
+        )}
+      </View>
+    </FadeIn>
+  )
+}
+
+function PeriodRow({ period, mode, t }: { period: Period; mode: Mode; t: T }) {
   const weeksText =
     period.workPercent > 0
-      ? `${formatWeeks(period.baseWeeks)} → ${formatWeeks(period.weeks)} weeks (working ${period.workPercent}%)`
-      : `${formatWeeks(period.weeks)} weeks`
+      ? t('calc.weeksWork', {
+          base: formatWeeks(period.baseWeeks),
+          weeks: formatWeeks(period.weeks),
+          percent: period.workPercent,
+        })
+      : t('calc.weeks', { weeks: formatWeeks(period.weeks) })
 
   return (
     <View style={styles.periodRow}>
       <View style={{ flex: 1 }}>
-        <Text style={styles.periodTitle}>{periodLabel(period.type, mode)}</Text>
+        <Text style={styles.periodTitle}>{periodLabel(period.type, mode, t)}</Text>
         <Text style={styles.periodMeta}>
           {weeksText} · {period.ratePercent}%
         </Text>
       </View>
       <View style={{ alignItems: 'flex-end' }}>
-        <Text style={styles.periodMonthly}>{formatPLN(period.monthlyAmount)} / month</Text>
-        <Text style={styles.periodTotal}>{formatPLN(period.totalAmount)} total</Text>
+        <AnimatedNumber
+          value={period.monthlyAmount}
+          format={(n) => t('calc.perMonth', { amount: formatPLN(n) })}
+          style={styles.periodMonthly}
+        />
+        <Text style={styles.periodTotal}>
+          {t('calc.totalShort', { amount: formatPLN(period.totalAmount) })}
+        </Text>
       </View>
     </View>
   )
@@ -531,14 +691,14 @@ function NumberField({
 const styles = StyleSheet.create({
   center: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24, gap: 16 },
   container: { padding: 16, gap: 12, paddingBottom: 48 },
-  title: { fontSize: 24, fontWeight: '700' },
+  title: { fontSize: 28, fontWeight: '800', color: '#14213d' },
   subtitle: { fontSize: 15, color: '#666' },
   section: {
     backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 16,
+    borderRadius: 18,
+    padding: 18,
     gap: 10,
-    elevation: 1,
+    boxShadow: '0 6px 20px rgba(20, 33, 61, 0.07)',
   },
   sectionTitle: { fontSize: 17, fontWeight: '700' },
   label: { fontSize: 14, fontWeight: '600', color: '#333' },
@@ -593,14 +753,65 @@ const styles = StyleSheet.create({
   periodMonthly: { fontSize: 15, fontWeight: '600' },
   periodTotal: { fontSize: 13, color: '#666' },
   resultTotal: { fontSize: 14, fontWeight: '600', textAlign: 'right' },
-  grandTotal: {
-    fontSize: 18,
-    fontWeight: '700',
-    marginTop: 8,
-    paddingTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#ddd',
+  resultHeader: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 10 },
+  printButton: {
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: '#0b3a5e',
   },
+  printButtonHover: { backgroundColor: '#eef2f8' },
+  printButtonText: { color: '#0b3a5e', fontWeight: '700', fontSize: 14 },
+  timelineWrap: {
+    backgroundColor: '#f7f9fc',
+    borderRadius: 14,
+    padding: 14,
+    gap: 8,
+  },
+  timelineTitle: { fontSize: 15, fontWeight: '700', color: '#14213d' },
+  timelineBar: {
+    flexDirection: 'row',
+    height: 34,
+    borderRadius: 10,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  timelineSegment: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRightWidth: 2,
+    borderRightColor: '#fff',
+  },
+  timelineSegmentText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  timelineMarker: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    width: 2,
+    backgroundColor: 'rgba(255,255,255,0.85)',
+  },
+  timelineAxis: { flexDirection: 'row', height: 18, position: 'relative' },
+  timelineAxisText: { fontSize: 12, color: '#5b6475', fontWeight: '600' },
+  timelineAxisMarker: {
+    position: 'absolute',
+    fontSize: 11,
+    color: '#5b6475',
+    transform: [{ translateX: -22 }],
+  },
+  legend: { gap: 6, marginTop: 4 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendDot: { width: 12, height: 12, borderRadius: 4 },
+  legendText: { fontSize: 13, color: '#333', flex: 1 },
+  grandTotalBox: {
+    marginTop: 8,
+    backgroundColor: '#0b3a5e',
+    borderRadius: 14,
+    padding: 18,
+    gap: 4,
+  },
+  grandTotalLabel: { color: 'rgba(255,255,255,0.8)', fontSize: 14, fontWeight: '600' },
+  grandTotalValue: { color: '#ffc857', fontSize: 30, fontWeight: '800' },
   disclaimer: { fontSize: 12, color: '#888' },
   warningBox: { backgroundColor: '#fff4e5', borderRadius: 12, padding: 14, gap: 6 },
   warningTitle: { fontWeight: '700', color: '#b35900' },
